@@ -11,20 +11,6 @@ describe('validation', () => {
       ],
       failure: ['foo'],
     },
-    stats: {
-      success: [
-        {},
-        true,
-        false,
-        'none',
-        'errors-only',
-        'errors-warnings',
-        'minimal',
-        'normal',
-        'verbose',
-      ],
-      failure: [0, 'foo'],
-    },
     writeToDisk: {
       success: [true, false, () => {}],
       failure: [{}],

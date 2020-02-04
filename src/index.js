@@ -12,14 +12,11 @@ import schema from './options.json';
 
 const noop = () => {};
 
-const defaults = {
-  stats: { colors: true, context: process.cwd() },
-};
-
-export default function wdm(compiler, opts = defaults) {
-  validateOptions(schema, opts, 'webpack Dev Middleware');
-
-  const options = Object.assign({}, defaults, opts);
+export default function wdm(compiler, options = {}) {
+  validateOptions(schema, options, {
+    name: 'Dev Middleware',
+    baseDataPath: 'options',
+  });
 
   // defining custom MIME type
   if (options.mimeTypes) {
@@ -51,8 +48,7 @@ export default function wdm(compiler, opts = defaults) {
 
   if (Array.isArray(context.compiler.compilers)) {
     watchOptions = context.compiler.compilers.map(
-      (compilerFromMultiCompileMode) =>
-        compilerFromMultiCompileMode.options.watchOptions || {}
+      (childCompiler) => childCompiler.options.watchOptions || {}
     );
   } else {
     watchOptions = context.compiler.options.watchOptions || {};

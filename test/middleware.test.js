@@ -21,7 +21,11 @@ import webpackMultiWatchOptionsConfig from './fixtures/server-test/webpack.array
 import webpackQueryStringConfig from './fixtures/server-test/webpack.querystring.config';
 import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
 import webpackErrorConfig from './fixtures/server-test/webpack.error.config';
+import webpackMultiErrorConfig from './fixtures/server-test/webpack.array.error.config';
 import webpackWarningConfig from './fixtures/server-test/webpack.warning.config';
+import webpackMultiWarningConfig from './fixtures/server-test/webpack.array.warning.config';
+import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/server-test/webpack.array.one-error-one-warning-one-success';
+import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/server-test/webpack.array.one-error-one-warning-one-success-with-names';
 
 describe('middleware', () => {
   let instance;
@@ -56,7 +60,6 @@ describe('middleware', () => {
         compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          stats: 'errors-only',
           publicPath: '/public/',
           mimeTypes: {
             typeMap: {
@@ -293,7 +296,7 @@ describe('middleware', () => {
 
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         instance(req, res, jest.fn()).then(done);
       });
@@ -305,7 +308,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         app = express();
         app.use((req, res, next) => {
@@ -354,17 +357,12 @@ describe('middleware', () => {
         }).not.toThrow();
       });
     });
-  });
 
-  describe('multi compiler', () => {
-    describe('should works', () => {
+    describe('should work in multi-compiler mode', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackMultiConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          publicPath: '/',
-        });
+        instance = middleware(compiler, { publicPath: '/' });
 
         app = express();
         app.use(instance);
@@ -385,11 +383,11 @@ describe('middleware', () => {
       });
     });
 
-    describe('should works with one "publicPath"', () => {
+    describe('should work with one "publicPath" in multi-compiler mode', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackClientServerConfig);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -417,6 +415,242 @@ describe('middleware', () => {
           .expect(404, done);
       });
     });
+
+    describe('should respect the "stats" option with the "false" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: false });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option with the "none" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: 'none' });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option with the "minimal" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: 'minimal' });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option with the "errors-warnings" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackOneErrorOneWarningOneSuccessConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackConfig,
+          stats: { all: false, entrypoints: true },
+        });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiWarningConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
+
+    describe('should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(
+          webpackOneErrorOneWarningOneSuccessWithNamesConfig
+        );
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        close();
+      });
+
+      it('should handle request to bundle file', (done) => {
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            done();
+          });
+      });
+    });
   });
 
   describe('mimeTypes option', () => {
@@ -425,11 +659,8 @@ describe('middleware', () => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          stats: 'errors-only',
           index: 'Index.phtml',
-          mimeTypes: {
-            'text/html': ['phtml'],
-          },
+          mimeTypes: { 'text/html': ['phtml'] },
         });
 
         app = express();
@@ -462,12 +693,8 @@ describe('middleware', () => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          stats: 'errors-only',
           index: 'Index.phtml',
-          mimeTypes: {
-            typeMap: { 'text/html': ['phtml'] },
-            force: true,
-          },
+          mimeTypes: { typeMap: { 'text/html': ['phtml'] }, force: true },
         });
 
         app = express();
@@ -506,7 +733,7 @@ describe('middleware', () => {
 
         spy = jest.spyOn(compiler, 'watch');
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -541,7 +768,7 @@ describe('middleware', () => {
 
         spy = jest.spyOn(compiler, 'watch');
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -579,7 +806,7 @@ describe('middleware', () => {
 
         spy = jest.spyOn(compiler, 'watch');
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -613,10 +840,7 @@ describe('middleware', () => {
     function writeToDisk(value, done) {
       const compiler = getCompiler(webpackConfig);
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        writeToDisk: value,
-      });
+      instance = middleware(compiler, { writeToDisk: value });
 
       app = express();
       app.use(instance);
@@ -632,10 +856,7 @@ describe('middleware', () => {
     function querystringToDisk(value, done) {
       const compiler = getCompiler(webpackQueryStringConfig);
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        writeToDisk: value,
-      });
+      instance = middleware(compiler, { writeToDisk: value });
 
       app = express();
       app.use(instance);
@@ -651,10 +872,7 @@ describe('middleware', () => {
     function multiToDisk(value, done) {
       const compiler = getCompiler(webpackMultiConfig);
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        writeToDisk: value,
-      });
+      instance = middleware(compiler, { writeToDisk: value });
 
       app = express();
       app.use(instance);
@@ -680,10 +898,7 @@ describe('middleware', () => {
         },
       });
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        writeToDisk: value,
-      });
+      instance = middleware(compiler, { writeToDisk: value });
 
       app = express();
       app.use(instance);
@@ -927,7 +1142,6 @@ describe('middleware', () => {
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
-        stats: 'errors-only',
         methods: ['POST'],
         publicPath: '/public/',
       });
@@ -965,7 +1179,6 @@ describe('middleware', () => {
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
-        stats: 'errors-only',
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
 
@@ -991,10 +1204,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          publicPath: '/public/',
-        });
+        instance = middleware(compiler, { publicPath: '/public/' });
 
         app = express();
         app.use(instance);
@@ -1021,10 +1231,7 @@ describe('middleware', () => {
     beforeAll((done) => {
       const compiler = getCompiler(webpackConfig);
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        serverSideRender: true,
-      });
+      instance = middleware(compiler, { serverSideRender: true });
 
       app = express();
       app.use(instance);
@@ -1261,11 +1468,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          index: false,
-          publicPath: '/',
-        });
+        instance = middleware(compiler, { index: false, publicPath: '/' });
 
         app = express();
         app.use(instance);
@@ -1287,11 +1490,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          index: true,
-          publicPath: '/',
-        });
+        instance = middleware(compiler, { index: true, publicPath: '/' });
 
         app = express();
         app.use(instance);
@@ -1314,7 +1513,6 @@ describe('middleware', () => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          stats: 'errors-only',
           index: 'index.custom',
           mimeTypes: {
             'text/html': ['custom'],
@@ -1350,10 +1548,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          index: 'noextension',
-        });
+        instance = middleware(compiler, { index: 'noextension' });
 
         app = express();
         app.use(instance);
@@ -1385,7 +1580,6 @@ describe('middleware', () => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          stats: 'errors-only',
           index: 'custom.html',
           publicPath: '/',
         });
@@ -1424,7 +1618,43 @@ describe('middleware', () => {
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
 
-        instance = middleware(compiler, { stats: 'errors-warnings' });
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('logs', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect(200, /console\.log\('Hey\.'\)/, () => {
+            instance.invalidate();
+
+            instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
+    describe('should log on successfully build in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -1460,7 +1690,43 @@ describe('middleware', () => {
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
 
-        instance = middleware(compiler, { stats: 'errors-warnings' });
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('logs', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect(200, /console\.log\('Hey\.'\)/, () => {
+            instance.invalidate();
+
+            instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
+    describe('should log on unsuccessful build in multi-compiler ', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiErrorConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -1496,7 +1762,43 @@ describe('middleware', () => {
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
 
-        instance = middleware(compiler, { stats: 'errors-warnings' });
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('logs', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect(200, /console\.log\('Hey\.'\)/, () => {
+            instance.invalidate();
+
+            instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
+    describe('should log on warning build in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiWarningConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -1543,7 +1845,7 @@ describe('middleware', () => {
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler);
 
         expect(getLogsPlugin.logs).toMatchSnapshot();
 
